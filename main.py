@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from file_manager import *
 
 filename = "pouet3.wav"
-threshold = 100
+threshold = 300
+nthreshold = -300
 
 def normalize_samples(samples, max_value):
     normalized_samples = []
@@ -12,9 +13,8 @@ def normalize_samples(samples, max_value):
         if abs(sample) > max_sample:
             max_sample = abs(sample)
     for sample in samples:
-        normalized_sample = sample * 1000 / max_sample
+        normalized_sample = sample * max_value / max_sample
         normalized_samples.append(normalized_sample)
-    print(normalized_samples)
     return normalized_samples
 
 # lecture du fichier wav
@@ -24,24 +24,42 @@ if not wav_samples:
     print("ERREUR: Aucun sample à la lecture du fichier wav")
     exit(0)
 # normaliser
-normalized_samples = normalize_samples(wav_samples, threshold)
 
-logs = []
-for i in normalized_samples:
-    if -threshold < i < threshold:
-        logs.append(f"Value Drop: {i}")
-    else:
-        logs.append('ok')
 
-with open("log_file.txt", 'w') as f:
-    for log in logs:
+def get_values_over_thresholds(normalized_samples):
+    logs = []
+    for i in normalized_samples:
+        if i > threshold:
+            logs.append(f"Too High: {i}")
+        elif i < nthreshold:
+            logs.append(f"Too low: {i}")
+    return logs
+
+normalized_samples = normalize_samples(wav_samples, 1000)
+logs_over = get_values_over_thresholds(normalized_samples)
+
+
+with open("log_file_over.txt", 'w') as f:
+    for log in logs_over:
         f.write(log + "\n")
     f.close()
 
-wav_samples_abs = [abs(sample) for sample in wav_samples]
-normalized_samples_abs = [abs(sample) for sample in normalized_samples]
-sq = math.sqrt(144)
+def get_values_drops(normalized_samples):
+    logs_drop = []
+    for i in range(len(normalized_samples) - 1):
+        if normalized_samples[i+1] - normalized_samples[i] > 10:
+            logs_drop.append(f"Value Drop: {normalized_samples[i]}, sample {i}")
+    return logs_drop
+
+logs_drop = get_values_drops(normalized_samples)
+
+with open("log_file_drop.txt", 'w') as f:
+    for log in logs_drop:
+        f.write(log + "\n")
+    f.close()
+
 plt.plot(normalized_samples)
-# plt.plot(logs)
-# plt.axhline(y=threshold, color="r")
+plt.axhline(y=threshold, color="r")
+plt.axhline(y=nthreshold, color="r")
+
 plt.show()
